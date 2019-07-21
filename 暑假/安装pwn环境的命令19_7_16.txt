@@ -1,0 +1,30 @@
+#安装python2.7
+sudo apt-get install python2.7
+#安装python-pip
+sudo apt install python-pip
+#用pip安装peda
+pip install peda
+#安装git
+sudo apt install git
+#从github上拉去peda
+git clone https://github.com/longld/peda.git ~/peda
+#安装python-dev
+sudo apt install python-dev
+#安装peda插件
+git clone https://github.com/longld/peda.git ~/peda
+echo "source ~/peda/peda.py" >> ~/.gdbinit
+#下载pwntools
+git clone https://github.com/Gallopsled/pwntools
+#下载ssh
+apt-get install openssh-server
+apt-get install ssh
+/etc/init.d/ssh restart
+sudo nano /etc/ssh/sshd_config
+#修改port 22
+#修改AddressFamily any
+#修改LoginGraceTime
+#修改Permit Root Login 并且该后面为yes
+#修改StrictModes
+#修改MaxSessions
+#将ssh服务设置成开机自启动
+update-rc.d ssh enable
