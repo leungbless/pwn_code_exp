@@ -1,2 +1,2 @@
 # pwn_code_exp
-用来保存我写过的pwn题以及相关的笔记和思路
+It is used to save pwn questions I have written and related notes and thoughts.
