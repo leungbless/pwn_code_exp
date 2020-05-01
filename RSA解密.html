@@ -1,0 +1,173 @@
+<script src="BigInt.js" type="text/javascript"></script>
+<script src="RSA.js" type="text/javascript"></script>
+<script src="Barrett.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+    $(function(){
+      var url = 'http://' + location.hostname + ':8766'  //location.hostname 不包含端口
+
+    if (!location.hostname) {
+      url = 'http://localhost:8766'
+    } else if (location.hostname == '' || location.hostname == '') {
+    }
+
+
+      var tokenId
+      var modulus
+      var exponent = '010001'
+      
+      //http://localhost:8766/client/question/getSimpleToken
+      //这个是也是get请求发包带进去的参数，有可能是向服务器请求唯一的参数或者硬件id或者变化的数
+      $.get(url+'/client/question/getSimpleToken',function(data){   //client客户
+        tokenId = data.obj.tokenId   //下面的Get的响应数据包中
+        modulus = data.obj.modulus   //下面的Get的响应数据包中
+      })
+
+
+      $('#search').click(function(){
+        
+        var question = $('#question1').val();   //输入框里面的值
+        var oriQues = question
+
+        question = question.substr(0,2)  //在字符串中抽取从 start 下标开始的指定数目的字符。//前两个文字
+        question = encodeURIComponent(question)  //转义用于分隔 URI 各个部分的标点符号   //大概是这个样子：%e4%ba%ba%e7%b1%bb
+
+        var token;
+        setMaxDigits(130);
+        
+                        //010001(可能是固定的)  下面的Get的响应数据包中             
+        key = new RSAKeyPair(exponent,"",modulus);  //在某一时刻这个值可能是不变的 因为modlus在get请求包中没变
+        token = tokenId+"\n"+question;              //tokenId也可能是不变的 变的只有后面经过 URL编码后(问题的(前两个字))
+        strToken = encryptedString(key, toke n);     //把strToken发到Post的包中就能实现白嫖了
+
+        //发送
+        //strToken和question是发包post带进去的参数
+        $.post(url+'/client/question/getAnswer', {   //Answer回答
+          strToken: strToken,  //计算出来的strToken
+          question: oriQues    //一开始输入的完整的问题
+        },function(r){ //传入r对下面进行传参和覆盖
+
+          var obj = {
+            question: $('#question1').val(),
+            answer: '暂无答案'
+          };
+          var obj = r.obj;  //对上面的obj进行覆盖
+
+
+          $('#question1').val('');  //输入框置空
+          $('#question2').html('<em>问题：</em>' + obj['question']);  //下面显示的一行  问题：人类社会发展的最根本规律是
+          $('#answer').html('<em>答案：</em>' + obj['answer'].replace(/\1/g, '、')); 
+          //下面答案一行  答案：生产关系一定要适合生产力状况的规律
+        })
+      });
+    });
+  </script>
+
+
+
+用RSA非对称加密方式实现。
+后台生成rsa密钥对，然后在页面设置rsa公钥，提交时用公钥加密密码，生成的密文传到后台，后台再用私钥解密，获取密码明文。
+这样客户端只需要知道<rsa加密方式和公钥>，前台不知道私钥是无法解密的，此解决方案还是相对比较安全的。
+缺陷：由于进行的都是大数计算，使得RSA最快的情况也比DES慢上100倍，无论 是软件还是硬件实现。所以一般来说只用于少量数据加密。
+
+
+1、前端加密需要引入Barrett.js、BigInt.js和RSA.js。
+<script src="/rsa/RSA.js" type="text/javascript"></script>//SA的主要算法；
+<script src="/rsa/BigInt.js" type="text/javascript"></script>//用于生成一个大整型；（这是RSA算法的需要）
+<script src="/rsa/Barrett.js" type="text/javascript"></script>//RSA算法所需要用到的一个支持文件
+
+2、前端加密代码：
+encryptedString:(function(paramStr, rsaKey){
+setMaxDigits(130);
+
+key = new RSAKeyPair(
+                     "22c29d5bda305e5daa0920b86cd410844a7aead043cfc3f78af2166e86e26eb",//加密指数
+                     "",   //解密参数
+                     "102e05ea9849d82b2630523751c1cd1984e92d3b45bf8d1ba0d67b55b0119eb9"//加密系数
+                    );
+var newpwd = encryptedString(key, password);
+
+
+
+<!----Post的请求包--->
+POST /client/question/getAnswer HTTP/1.1
+Host: ques.nanayun.com:8766
+Content-Length: 264
+Accept: */*
+Origin: http://ques.nanayun.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.46 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: http://ques.nanayun.com/
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-TW,zh-HK;q=0.9,zh;q=0.8,zh-CN;q=0.7
+Connection: close
+
+strToken=56b63814c6d8c683afa62bf1c1470d89aa1fa1d392e4ae4a972f8f23f638f64a73462338400755e781645a337360c2f77a670a7cfbdbe7a9c5deedb78965a755&question=%E4%BA%BA%E7%B1%BB%E7%A4%BE%E4%BC%9A%E5%8F%91%E5%B1%95%E7%9A%84%E6%9C%80%E6%A0%B9%E6%9C%AC%E8%A7%84%E5%BE%8B%E6%98%AF
+
+URL编码
+
+
+<!----Post请求的响应包--->
+HTTP/1.1 200 
+Access-Control-Allow-Origin: http://ques.nanayun.com
+Vary: Origin
+Access-Control-Allow-Credentials: true
+Content-Type: application/json;charset=UTF-8
+Date: Mon, 27 Apr 2020 14:48:16 GMT
+Connection: close
+Content-Length: 277
+
+{"msg":"查询成功","obj":{"collectTime":null,
+                        "createUserId":0,
+                        "answer":"生产关系一定要适合生产力状况的规律",
+                        "question":"人类社会发展的最根本规律是",
+                        "ipAddress":"",
+                        "updateTime":null,
+                        "id":5646694,
+                        "source":""
+                       },"success":true,"status":"0010160009"}
+
+
+
+<!----Get的请求包--->
+GET /client/question/getSimpleToken HTTP/1.1
+Host: ques.nanayun.com:8766
+Accept: */*
+Origin: http://ques.nanayun.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.46 Safari/537.36
+Referer: http://ques.nanayun.com/
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-TW,zh-HK;q=0.9,zh;q=0.8,zh-CN;q=0.7
+Connection: close
+
+<!----Get请求的响应包--->
+HTTP/1.1 200 
+Access-Control-Allow-Origin: http://ques.nanayun.com
+Vary: Origin
+Access-Control-Allow-Credentials: true
+Content-Type: application/json;charset=UTF-8
+Date: Mon, 27 Apr 2020 14:35:31 GMT
+Connection: close
+Content-Length: 251
+
+{"msg":"成功","obj":{"tokenId":"H7Y5600HE3ci9sJ529i04UXtc5P9r3zUnkAN",
+                    "modulus":"8a96e4920b847ca0a0b233ce76d2a07097a1f3089f2eca15a41b097aa6c323898bac1ccdc99e2d855652a7e864d19d4e9e4d278a50c8ed32f60f79cf9326b8cb"
+                    },"success":true,"status":"0010160009"}
+
+
+
+
+<script type="text/javascript">
+    //公钥加密明文
+    setMaxDigits(19);
+    var publicKey = "25065286b2627846f19411522364326d";
+    var key1 = new RSAKeyPair("10001", "", publicKey);  明文的 publicKey次方 除以 10001 等于密文
+    var password = "jack1234"; //明文 就是需要加密的东西
+    var encryPssword = encryptedString(key1, password);  //这个就是加密后的密文
+    alert(encryPssword);   
+    //私钥解密
+    var privateKey = "d3c495c2580d606089f1cbab136f071";
+    var key2 = new RSAKeyPair("10001", privateKey, publicKey);
+    var decryptedPssword = decryptedString(key2, encryPssword);
+    alert(decryptedPssword);
+</script>
